@@ -25,8 +25,15 @@ h2{font-family:Ruqaa;font-size:clamp(34px,10vw,52px);font-weight:700;line-height
 p.big{font-size:clamp(18px,5vw,24px);line-height:2}
 .days{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;justify-content:center}
 .day{width:74px;padding:14px 0;border-radius:18px;background:rgba(255,255,255,.55);border:1.5px solid rgba(201,164,92,.5);box-shadow:0 6px 16px rgba(120,80,90,.1)}
+.day{position:relative;transition:opacity .6s,filter .6s,transform .6s}
+.day.past{opacity:.38;filter:grayscale(.85)}
+.day.past::after{content:"انتهى";position:absolute;left:50%;bottom:-24px;transform:translateX(-50%);font-size:11px;color:#A08E96;white-space:nowrap}
+.day.past b{text-decoration:line-through;text-decoration-thickness:2px}
+.day.now{border-color:var(--pink);box-shadow:0 0 0 4px rgba(217,115,122,.18),0 8px 20px rgba(217,115,122,.25);animation:glow 2s infinite}
+.day.now::after{content:"الآن";position:absolute;left:50%;bottom:-24px;transform:translateX(-50%);font-size:11px;color:var(--pink);font-weight:600}
+@keyframes glow{50%{box-shadow:0 0 0 8px rgba(217,115,122,.08),0 8px 20px rgba(217,115,122,.25)}}
 .day b{display:block;font-size:30px;color:var(--pink);font-weight:600}.day span{font-size:13px;color:var(--soft)}
-.month{margin-top:16px;color:var(--soft);letter-spacing:3px}
+.month{margin-top:36px;color:var(--soft);letter-spacing:3px}
 .time{font-size:clamp(26px,8vw,40px);font-weight:600;white-space:nowrap}
 .time small{font-size:.45em;font-weight:400;color:var(--soft)}
 .clock{font-size:15px;color:var(--soft);margin-top:10px}
@@ -60,10 +67,10 @@ p.big{font-size:clamp(18px,5vw,24px);line-height:2}
  <div class="lbl rv">مـوعـد الـزيـارة</div>
  <h2 class="emb rv d1">من الخميس إلى الأحد</h2>
  <div class="days">
-  <div class="day rv d1"><b>٢٦</b><span>الخميس</span></div>
-  <div class="day rv d2"><b>٢٧</b><span>الجمعة</span></div>
-  <div class="day rv d3"><b>٢٨</b><span>السبت</span></div>
-  <div class="day rv d4"><b>٢٩</b><span>الأحد</span></div>
+  <div data-d="26" class="day rv d1"><b>٢٦</b><span>الخميس</span></div>
+  <div data-d="27" class="day rv d2"><b>٢٧</b><span>الجمعة</span></div>
+  <div data-d="28" class="day rv d3"><b>٢٨</b><span>السبت</span></div>
+  <div data-d="29" class="day rv d4"><b>٢٩</b><span>الأحد</span></div>
  </div>
  <div class="month rv d4">نوفمبر ٢٠٢٦</div>
 </section>
@@ -85,11 +92,17 @@ p.big{font-size:clamp(18px,5vw,24px);line-height:2}
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.25});
 document.querySelectorAll('.rv').forEach(el=>io.observe(el));
 const ar=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
-const start=new Date('2026-11-26T19:30:00+03:00'),end=new Date('2026-11-29T22:00:00+03:00');
-function tick(){const now=new Date();
- if(now>=end){document.getElementById('cdl').textContent='شكراً لزيارتكم';document.getElementById('cd').style.display='none';return}
- if(now>=start){document.getElementById('cdl').textContent='الزيارة مفتوحة الآن 🤍';document.getElementById('cd').style.display='none';return}
- let s=Math.floor((start-now)/1000);dd.textContent=ar(Math.floor(s/86400));hh.textContent=ar(Math.floor(s%86400/3600));mm.textContent=ar(Math.floor(s%3600/60))}
+const days=[26,27,28,29].map(d=>({d,s:new Date(`2026-11-${d}T19:30:00+03:00`),e:new Date(`2026-11-${d}T22:00:00+03:00`)}));
+const _t=new URLSearchParams(location.search).get("t");
+function tick(){const now=_t?new Date(_t):new Date();
+ days.forEach(x=>{const el=document.querySelector(`.day[data-d="${x.d}"]`);el.classList.toggle('past',now>=x.e);el.classList.toggle('now',now>=x.s&&now<x.e)});
+ const cdl=document.getElementById('cdl'),cd=document.getElementById('cd');
+ const cur=days.find(x=>now>=x.s&&now<x.e);
+ if(cur){cdl.textContent='الزيارة مفتوحة الآن 🤍 حتى الساعة ١٠ مساءً';cd.style.display='none';return}
+ const nx=days.find(x=>now<x.s);
+ if(!nx){cdl.textContent='انتهت أيام الزيارة، شكراً لزيارتكم 🤍';cd.style.display='none';return}
+ cdl.textContent=nx===days[0]?'باقي على أول يوم':'باقي على زيارة اليوم';cd.style.display='';
+ let s=Math.floor((nx.s-now)/1000);dd.textContent=ar(Math.floor(s/86400));hh.textContent=ar(Math.floor(s%86400/3600));mm.textContent=ar(Math.floor(s%3600/60))}
 tick();setInterval(tick,30000);
 let last=0;addEventListener('scroll',()=>{const t=Date.now();if(t-last<180)return;last=t;petal()},{passive:true});
 function petal(){const p=document.createElement('div');p.className='petal';p.style.left=Math.random()*100+'vw';p.style.setProperty('--x',(Math.random()*120-60)+'px');const s=8+Math.random()*10;p.style.width=p.style.height=s+'px';p.style.animationDuration=(4+Math.random()*3)+'s';document.body.appendChild(p);setTimeout(()=>p.remove(),7500)}
